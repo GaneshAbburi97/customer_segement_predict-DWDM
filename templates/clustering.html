@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Reader Clustering - Library DW & DM{% endblock %}
+{% block page_title %}Module 4: Reader Clustering (K-Means Algorithm){% endblock %}
+
+{% block content %}
+<!-- Control Panel & K Selector -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h5 class="fw-bold mb-1">Unsupervised Learning: Reader Segmentation (K-Means)</h5>
+                <p class="text-secondary small mb-0">Discovers natural reader clusters based on standardized features: <code>Total Books Borrowed</code>, <code>Avg Borrowing Duration</code>, <code>Total Fines</code>, and <code>Late Returns</code>.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <form method="GET" action="{{ url_for('mining.clustering_view') }}" class="d-inline-flex gap-2">
+                    <select name="k" class="form-select form-select-sm" style="width: auto;">
+                        <option value="2" {% if current_k == 2 %}selected{% endif %}>k = 2 Clusters</option>
+                        <option value="3" {% if current_k == 3 %}selected{% endif %}>k = 3 Clusters (Standard)</option>
+                        <option value="4" {% if current_k == 4 %}selected{% endif %}>k = 4 Clusters</option>
+                        <option value="5" {% if current_k == 5 %}selected{% endif %}>k = 5 Clusters</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm px-3 shadow-sm text-nowrap">
+                        <i class="bi bi-play-circle me-1"></i> Run K-Means
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cluster Profile Summary Cards -->
+<div class="row g-3 mb-4">
+    {% set colors = ['info', 'primary', 'success', 'warning', 'danger'] %}
+    {% for c in results.clusters %}
+    {% set color = colors[loop.index0 % colors|length] %}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100 border-start border-4 border-{{ color }}">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-{{ color }}-subtle text-{{ color }} fw-bold">Cluster {{ c.cluster_id + 1 }}</span>
+                    <span class="fs-4 fw-bold text-dark">{{ c.reader_count }} Readers</span>
+                </div>
+                <h6 class="fw-bold text-dark mb-2">{{ c.cluster_name }}</h6>
+                <ul class="list-unstyled small text-secondary mb-0">
+                    <li>&bull; Avg Borrowings: <strong>{{ c.avg_borrowing_count }} books</strong></li>
+                    <li>&bull; Avg Duration: <strong>{{ c.avg_duration }} days</strong></li>
+                    <li>&bull; Avg Fine: <strong>${{ "%.2f"|format(c.avg_fine) }}</strong></li>
+                    <li>&bull; Top Department: <strong>{{ c.top_department }}</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 2D Scatter Plot Visualization -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-scatter-chart text-primary me-2"></i>Reader Segmentation Scatter Plot (Total Borrows vs Duration)</h6>
+        <span class="badge bg-light text-secondary border">k = {{ results.k }}</span>
+    </div>
+    <div class="card-body p-4">
+        <div style="height: 380px;">
+            <canvas id="clusterScatterChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Cluster Detailed Comparison Table -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-table text-secondary me-2"></i>Cluster Centroid &amp; Behavioral Summary</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Cluster Name</th>
+                    <th>Reader Count</th>
+                    <th>Avg Borrowings</th>
+                    <th>Avg Duration (Days)</th>
+                    <th>Avg Total Fine ($)</th>
+                    <th>Late Returns Rate</th>
+                    <th>Dominant Department</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in results.clusters %}
+                <tr>
+                    <td class="fw-bold text-dark">{{ c.cluster_name }}</td>
+                    <td><span class="badge bg-light text-dark border fs-6">{{ c.reader_count }}</span></td>
+                    <td class="fw-semibold text-primary">{{ c.avg_borrowing_count }}</td>
+                    <td>{{ c.avg_duration }} days</td>
+                    <td>${{ "%.2f"|format(c.avg_fine) }}</td>
+                    <td>{{ c.avg_late_returns }}</td>
+                    <td><span class="badge bg-info-subtle text-info border border-info-subtle">{{ c.top_department }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Reader Cluster Assignments Table -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill text-primary me-2"></i>Reader Cluster Assignments</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Reader ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Membership</th>
+                    <th>Total Borrowed</th>
+                    <th>Avg Duration</th>
+                    <th>Total Fines</th>
+                    <th>Assigned Cluster</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results.readers %}
+                <tr>
+                    <td class="fw-bold text-primary">{{ r.reader_id }}</td>
+                    <td>{{ r.reader_name }}</td>
+                    <td>{{ r.department }}</td>
+                    <td>{{ r.membership_type }}</td>
+                    <td class="fw-bold">{{ r.total_books_borrowed }}</td>
+                    <td>{{ "%.1f"|format(r.avg_borrowing_duration) }} days</td>
+                    <td>${{ "%.2f"|format(r.total_fine) }}</td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ r.cluster_name }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const scatterPayload = {{ results.scatter_by_cluster | tojson }};
+    const colorPalette = ['#0284c7', '#0d9488', '#f59e0b', '#ec4899', '#8b5cf6'];
+
+    const datasets = [];
+    let idx = 0;
+    for (const [clusterName, points] of Object.entries(scatterPayload)) {
+        datasets.push({
+            label: clusterName,
+            data: points.map(p => ({ x: p.x, y: p.y, reader: p.reader_name, id: p.reader_id, dept: p.department })),
+            backgroundColor: colorPalette[idx % colorPalette.length],
+            borderColor: colorPalette[idx % colorPalette.length],
+            pointRadius: 6,
+            pointHoverRadius: 9
+        });
+        idx++;
+    }
+
+    const ctxScatter = document.getElementById('clusterScatterChart');
+    if (ctxScatter) {
+        new Chart(ctxScatter, {
+            type: 'scatter',
+            data: { datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                const raw = ctx.raw;
+                                return `${raw.reader} (${raw.id} - ${raw.dept}): ${raw.x} books, ${raw.y} avg days`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Total Books Borrowed' },
+                        beginAtZero: true
+                    },
+                    y: {
+                        title: { display: true, text: 'Average Borrowing Duration (Days)' },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

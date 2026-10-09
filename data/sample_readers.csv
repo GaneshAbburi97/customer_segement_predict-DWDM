@@ -1,0 +1,51 @@
+reader_id,name,age,gender,department,membership_type,registration_date
+R101,Aarav Sharma,21,Male,Computer Science,Student,2025-01-10
+R102,Diya Patel,22,Female,Computer Science,Student,2025-01-12
+R103,Dr. Rajesh Verma,45,Male,Computer Science,Faculty,2024-08-15
+R104,Sneha Kulkarni,24,Female,Data Science,Researcher,2024-09-01
+R105,Rohan Gupta,20,Male,Information Technology,Student,2025-01-15
+R106,Priya Nair,21,Female,Data Science,Student,2025-01-18
+R107,Dr. Ananya Sen,39,Female,Data Science,Faculty,2024-07-20
+R108,Vikram Singh,23,Male,Electrical Engineering,Student,2025-01-20
+R109,Neha Joshi,22,Female,Information Technology,Student,2025-01-22
+R110,Amitabh Roy,28,Male,Business Administration,Researcher,2024-11-05
+R111,Kavita Reddy,21,Female,Business Administration,Student,2025-01-25
+R112,Siddharth Rao,23,Male,Mechanical Engineering,Student,2025-02-01
+R113,Dr. Suresh Menon,52,Male,Mechanical Engineering,Faculty,2024-06-10
+R114,Pooja Hegde,20,Female,Literature & Arts,Student,2025-02-05
+R115,Manish Choudhary,25,Male,Literature & Arts,Researcher,2024-10-12
+R116,Shweta Deshmukh,22,Female,Computer Science,Student,2025-02-10
+R117,Gaurav Malhotra,21,Male,Information Technology,Student,2025-02-12
+R118,Tanvi Bhat,22,Female,Data Science,Student,2025-02-15
+R119,Prof. Meera Iyer,48,Female,Business Administration,Faculty,2024-05-18
+R120,Aditya Kapoor,23,Male,Computer Science,Student,2025-02-20
+R121,Isha Saxena,21,Female,Electrical Engineering,Student,2025-02-22
+R122,Karan Singhal,26,Male,Computer Science,Researcher,2024-12-01
+R123,Ananya Mishra,20,Female,Data Science,Student,2025-02-25
+R124,Dr. Vivek Chawla,43,Male,Information Technology,Faculty,2024-07-15
+R125,Ritu Agarwal,22,Female,Business Administration,Student,2025-03-01
+R126,Deepak Kumar,24,Male,Mechanical Engineering,Student,2025-03-02
+R127,Harshita Jain,21,Female,Computer Science,Student,2025-03-03
+R128,Nikhil Aggarwal,27,Male,Data Science,Researcher,2024-11-20
+R129,Megha Pandey,23,Female,Electrical Engineering,Student,2025-03-05
+R130,Varun Sethi,22,Male,Information Technology,Student,2025-03-08
+R131,Anjali Tripathi,21,Female,Literature & Arts,Student,2025-03-10
+R132,Dr. Harish Nambiar,50,Male,Electrical Engineering,Faculty,2024-04-12
+R133,Simran Kaur,22,Female,Business Administration,Student,2025-03-12
+R134,Abhinav Tiwari,24,Male,Computer Science,Student,2025-03-15
+R135,Payal Dutta,25,Female,Data Science,Researcher,2024-10-30
+R136,Kunal Ghosh,21,Male,Mechanical Engineering,Student,2025-03-18
+R137,Tarun Bansal,23,Male,Information Technology,Student,2025-03-20
+R138,Pallavi Shinde,22,Female,Computer Science,Student,2025-03-22
+R139,Dr. Sanjay Bhattacharya,47,Male,Literature & Arts,Faculty,2024-06-25
+R140,Bhavya Sharma,20,Female,Data Science,Student,2025-03-25
+R141,Raghav Mathur,22,Male,Business Administration,Student,2025-03-28
+R142,Alok Ranjan,29,Male,Computer Science,Researcher,2024-09-15
+R143,Kritika Soni,21,Female,Electrical Engineering,Student,2025-04-01
+R144,Kartik Varma,23,Male,Information Technology,Student,2025-04-03
+R145,Shilpa Murthy,22,Female,Literature & Arts,Student,2025-04-05
+R146,Prateek Saxena,21,Male,Mechanical Engineering,Student,2025-04-08
+R147,Nandini Das,26,Female,Business Administration,Researcher,2024-11-15
+R148,Ashwin Pillai,22,Male,Data Science,Student,2025-04-10
+R149,Divya Swaminathan,23,Female,Computer Science,Student,2025-04-12
+R150,Yashwant Patil,24,Male,Information Technology,Student,2025-04-15

@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+
+{% block title %}Data Warehouse & Star Schema - Library DW & DM{% endblock %}
+{% block page_title %}Module 2: Star-Schema Data Warehouse{% endblock %}
+
+{% block content %}
+<!-- Intro Banner & Action -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Dimensional Data Warehouse Architecture (Star Schema)</h5>
+            <p class="text-secondary small mb-0">Centralized Fact Table connected to Reader, Book, and Date Dimension Tables for High-Performance OLAP Analysis.</p>
+        </div>
+        <a href="{{ url_for('warehouse.etl_view') }}" class="btn btn-primary btn-sm px-3 shadow-sm">
+            <i class="bi bi-gear-wide-connected me-1"></i> Open ETL Control Panel
+        </a>
+    </div>
+</div>
+
+<!-- DW KPI Counts -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Fact Records (fact_borrowing)</div>
+            <div class="stat-value text-danger">{{ fact_cnt }}</div>
+            <small class="text-muted">Grain: 1 row per checkout transaction</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Reader Dimension (dim_reader)</div>
+            <div class="stat-value text-primary">{{ dim_reader_cnt }}</div>
+            <small class="text-muted">Surrogate Key: <code>reader_key</code></small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Book Dimension (dim_book)</div>
+            <div class="stat-value text-info">{{ dim_book_cnt }}</div>
+            <small class="text-muted">Surrogate Key: <code>book_key</code></small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Date Dimension (dim_date)</div>
+            <div class="stat-value text-success">{{ dim_date_cnt }}</div>
+            <small class="text-muted">Calendar Key: <code>date_key</code> (YYYYMMDD)</small>
+        </div>
+    </div>
+</div>
+
+<!-- Visual Star Schema Diagram for Academic / Viva Defense -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Star Schema Architecture Visualizer</h6>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4 justify-content-center align-items-center">
+            <!-- Left Dimension: Reader -->
+            <div class="col-lg-3">
+                <div class="schema-box schema-box-dim">
+                    <div class="schema-box-header text-primary d-flex justify-content-between">
+                        <span><i class="bi bi-person-badge me-1"></i> dim_reader</span>
+                        <span class="badge bg-primary">Dimension</span>
+                    </div>
+                    <ul class="list-unstyled small mb-0 font-monospace">
+                        <li class="fw-bold text-dark"><i class="bi bi-key-fill text-warning me-1"></i> reader_key (PK)</li>
+                        <li>reader_id (Natural Key)</li>
+                        <li>reader_name</li>
+                        <li>age</li>
+                        <li>gender</li>
+                        <li>department</li>
+                        <li>membership_type</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Center: Fact Table -->
+            <div class="col-lg-5">
+                <div class="schema-box schema-box-fact text-center">
+                    <div class="schema-box-header text-danger d-flex justify-content-between">
+                        <span><i class="bi bi-table me-1"></i> fact_borrowing</span>
+                        <span class="badge bg-danger">Fact Table (Center)</span>
+                    </div>
+                    <div class="row text-start small font-monospace">
+                        <div class="col-6">
+                            <div class="fw-bold text-dark border-bottom pb-1 mb-1">Foreign Keys:</div>
+                            <li><i class="bi bi-key text-secondary me-1"></i> reader_key (FK)</li>
+                            <li><i class="bi bi-key text-secondary me-1"></i> book_key (FK)</li>
+                            <li><i class="bi bi-key text-secondary me-1"></i> date_key (FK)</li>
+                            <li>transaction_id</li>
+                        </div>
+                        <div class="col-6">
+                            <div class="fw-bold text-dark border-bottom pb-1 mb-1">Measures / Metrics:</div>
+                            <li>borrow_count (Additive)</li>
+                            <li>return_count (Additive)</li>
+                            <li>fine_amount ($)</li>
+                            <li>borrowing_duration (Days)</li>
+                            <li>status</li>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Dimension: Book & Date -->
+            <div class="col-lg-3">
+                <div class="schema-box schema-box-dim mb-3">
+                    <div class="schema-box-header text-info d-flex justify-content-between">
+                        <span><i class="bi bi-book me-1"></i> dim_book</span>
+                        <span class="badge bg-info text-dark">Dimension</span>
+                    </div>
+                    <ul class="list-unstyled small mb-0 font-monospace">
+                        <li class="fw-bold text-dark"><i class="bi bi-key-fill text-warning me-1"></i> book_key (PK)</li>
+                        <li>book_id</li>
+                        <li>title</li>
+                        <li>author</li>
+                        <li>category</li>
+                        <li>publisher</li>
+                        <li>language</li>
+                    </ul>
+                </div>
+
+                <div class="schema-box schema-box-dim">
+                    <div class="schema-box-header text-success d-flex justify-content-between">
+                        <span><i class="bi bi-calendar-event me-1"></i> dim_date</span>
+                        <span class="badge bg-success">Dimension</span>
+                    </div>
+                    <ul class="list-unstyled small mb-0 font-monospace">
+                        <li class="fw-bold text-dark"><i class="bi bi-key-fill text-warning me-1"></i> date_key (PK)</li>
+                        <li>full_date</li>
+                        <li>day, month, quarter, year</li>
+                        <li>month_name, day_of_week</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Fact Table Records Explorer -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-database text-danger me-2"></i>Fact Table Preview (fact_borrowing)</h6>
+        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Star Schema Central Table</span>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Fact ID</th>
+                    <th>Transaction</th>
+                    <th>Reader Dimension</th>
+                    <th>Book Dimension</th>
+                    <th>Date Dimension</th>
+                    <th>Duration</th>
+                    <th>Fine</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in sample_facts %}
+                <tr>
+                    <td class="fw-bold text-danger">#{{ f.borrowing_id }}</td>
+                    <td>{{ f.transaction_id }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ f.reader_name }}</div>
+                        <small class="text-muted">{{ f.department }}</small>
+                    </td>
+                    <td>
+                        <div class="fw-semibold text-truncate" style="max-width: 200px;" title="{{ f.book_title }}">{{ f.book_title }}</div>
+                        <small class="badge bg-light text-dark border">{{ f.category }}</small>
+                    </td>
+                    <td>{{ f.borrow_date }}</td>
+                    <td>{{ f.borrowing_duration }} days</td>
+                    <td>${{ "%.2f"|format(f.fine_amount) }}</td>
+                    <td>
+                        {% if f.status == 'Returned' %}
+                        <span class="badge bg-success-subtle text-success">Returned</span>
+                        {% else %}
+                        <span class="badge bg-warning-subtle text-warning">Active</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Dimension Tables Preview Tabs -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#tab-dim-reader">
+                    <i class="bi bi-person-badge me-1"></i> dim_reader ({{ dim_reader_cnt }})
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-dim-book">
+                    <i class="bi bi-book me-1"></i> dim_book ({{ dim_book_cnt }})
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#tab-dim-date">
+                    <i class="bi bi-calendar-date me-1"></i> dim_date ({{ dim_date_cnt }})
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-0">
+        <div class="tab-content">
+            <!-- dim_reader tab -->
+            <div class="tab-pane fade show active table-responsive" id="tab-dim-reader">
+                <table class="table table-hover table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>reader_key (PK)</th>
+                            <th>reader_id</th>
+                            <th>reader_name</th>
+                            <th>age</th>
+                            <th>gender</th>
+                            <th>department</th>
+                            <th>membership_type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in dim_readers %}
+                        <tr>
+                            <td class="fw-bold text-primary">{{ r.reader_key }}</td>
+                            <td>{{ r.reader_id }}</td>
+                            <td>{{ r.reader_name }}</td>
+                            <td>{{ r.age }}</td>
+                            <td>{{ r.gender }}</td>
+                            <td>{{ r.department }}</td>
+                            <td>{{ r.membership_type }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- dim_book tab -->
+            <div class="tab-pane fade table-responsive" id="tab-dim-book">
+                <table class="table table-hover table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>book_key (PK)</th>
+                            <th>book_id</th>
+                            <th>title</th>
+                            <th>author</th>
+                            <th>category</th>
+                            <th>publisher</th>
+                            <th>language</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in dim_books %}
+                        <tr>
+                            <td class="fw-bold text-info">{{ b.book_key }}</td>
+                            <td>{{ b.book_id }}</td>
+                            <td>{{ b.title }}</td>
+                            <td>{{ b.author }}</td>
+                            <td>{{ b.category }}</td>
+                            <td>{{ b.publisher }}</td>
+                            <td>{{ b.language }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- dim_date tab -->
+            <div class="tab-pane fade table-responsive" id="tab-dim-date">
+                <table class="table table-hover table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>date_key (PK)</th>
+                            <th>full_date</th>
+                            <th>day</th>
+                            <th>month</th>
+                            <th>month_name</th>
+                            <th>quarter</th>
+                            <th>year</th>
+                            <th>day_of_week</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in dim_dates %}
+                        <tr>
+                            <td class="fw-bold text-success">{{ d.date_key }}</td>
+                            <td>{{ d.full_date }}</td>
+                            <td>{{ d.day }}</td>
+                            <td>{{ d.month }}</td>
+                            <td>{{ d.month_name }}</td>
+                            <td>Q{{ d.quarter }}</td>
+                            <td>{{ d.year }}</td>
+                            <td>{{ d.day_of_week }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

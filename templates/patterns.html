@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Borrowing Patterns - Library DW & DM{% endblock %}
+{% block page_title %}Module 5: Borrowing Pattern Discovery (Apriori Algorithm){% endblock %}
+
+{% block content %}
+<!-- Parameter Configuration Panel -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4">
+        <form method="GET" action="{{ url_for('mining.patterns_view') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-secondary mb-1">Analysis Target</label>
+                <select name="target_type" class="form-select form-select-sm">
+                    <option value="books" {% if target_type == 'books' %}selected{% endif %}>Individual Book Titles Co-Borrowing</option>
+                    <option value="categories" {% if target_type == 'categories' %}selected{% endif %}>Subject Categories Co-Borrowing</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary mb-1">Minimum Support: <span id="supp-val" class="text-primary">{{ min_support }}</span></label>
+                <input type="range" name="min_support" class="form-range" min="0.04" max="0.40" step="0.02" value="{{ min_support }}" oninput="document.getElementById('supp-val').textContent = this.value">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary mb-1">Minimum Confidence: <span id="conf-val" class="text-success">{{ min_confidence }}</span></label>
+                <input type="range" name="min_confidence" class="form-range" min="0.20" max="0.90" step="0.05" value="{{ min_confidence }}" oninput="document.getElementById('conf-val').textContent = this.value">
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="submit" class="btn btn-primary btn-sm w-100 py-2 shadow-sm">
+                    <i class="bi bi-funnel me-1"></i> Mine Patterns
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Reader Baskets</div>
+            <div class="stat-value text-dark">{{ results.total_transactions }}</div>
+            <small class="text-muted">Distinct reader checkout portfolios</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Frequent Itemsets</div>
+            <div class="stat-value text-primary">{{ results.frequent_itemsets|length }}</div>
+            <small class="text-muted">Satisfying Min Support: {{ "%.0f"|format(min_support * 100) }}%</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Association Rules</div>
+            <div class="stat-value text-success">{{ results.rules|length }}</div>
+            <small class="text-muted">Satisfying Min Confidence: {{ "%.0f"|format(min_confidence * 100) }}%</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Max Rule Lift</div>
+            <div class="stat-value text-danger">
+                {% if results.rules %}{{ results.rules[0].lift }}{% else %}1.0{% endif %}
+            </div>
+            <small class="text-muted">Lift &gt; 1 indicates strong co-occurrence</small>
+        </div>
+    </div>
+</div>
+
+<!-- Discovered Association Rules Table -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-link-45deg text-success me-2"></i>Discovered Association Rules (Antecedent &rarr; Consequent)</h6>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ results.rules|length }} Strong Rules</span>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">If Reader Borrows (Antecedent)</th>
+                    <th style="width: 30%;">Also Borrows (Consequent)</th>
+                    <th>Support (%)</th>
+                    <th>Confidence (%)</th>
+                    <th>Lift Score</th>
+                    <th>Strength</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in results.rules %}
+                <tr>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 py-1 px-2 text-wrap text-start">
+                            {{ rule.antecedent_str }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 py-1 px-2 text-wrap text-start">
+                            &rarr; {{ rule.consequent_str }}
+                        </span>
+                    </td>
+                    <td class="fw-semibold">{{ rule.support_pct }}%</td>
+                    <td class="fw-bold text-primary">{{ rule.confidence_pct }}%</td>
+                    <td>
+                        <span class="badge {% if rule.lift >= 2.0 %}bg-danger{% elif rule.lift >= 1.2 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ rule.lift }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if rule.lift >= 2.0 %}
+                        <span class="text-danger small fw-bold"><i class="bi bi-fire me-1"></i>Very Strong</span>
+                        {% elif rule.lift >= 1.2 %}
+                        <span class="text-warning-emphasis small fw-bold"><i class="bi bi-star-fill me-1"></i>Strong</span>
+                        {% else %}
+                        <span class="text-muted small">Moderate</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        No association rules found at the chosen support and confidence thresholds. Try lowering the sliders above.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Frequent Itemsets Breakdown Table -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-collection text-primary me-2"></i>Frequent Itemsets (L1, L2, L3)</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Itemset Pattern</th>
+                    <th>Itemset Size (k)</th>
+                    <th>Support Count</th>
+                    <th>Support %</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.frequent_itemsets %}
+                <tr>
+                    <td>
+                        <span class="fw-semibold text-dark">{{ item.itemset_str }}</span>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">{{ item.size }}-Itemset</span></td>
+                    <td>{{ item.support_count }} transactions</td>
+                    <td class="fw-bold text-primary">{{ item.support_pct }}%</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">No frequent itemsets found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Library DW & DM System{% endblock %}
+{% block page_title %}Executive Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h4 class="fw-bold text-dark mb-1">Library Management Data Warehouse & Mining System</h4>
+            <p class="text-secondary mb-0">Book Circulation Analysis &bull; Reader Classification &bull; Clustering &bull; Borrowing Patterns &bull; Text Mining</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('warehouse.etl_view') }}" class="btn btn-outline-primary btn-sm px-3">
+                <i class="bi bi-gear-wide-connected me-1"></i> ETL Status
+            </a>
+            <a href="{{ url_for('circulation.index') }}" class="btn btn-primary btn-sm px-3 shadow-sm">
+                <i class="bi bi-pie-chart me-1"></i> Circulation Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 6 KPI Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-label">Total Readers</div>
+                    <div class="stat-value">{{ total_readers }}</div>
+                </div>
+                <div class="stat-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-label">Total Books</div>
+                    <div class="stat-value">{{ total_books }}</div>
+                </div>
+                <div class="stat-icon bg-info-subtle text-info">
+                    <i class="bi bi-journal-text"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-label">Total Borrows</div>
+                    <div class="stat-value">{{ total_borrowings }}</div>
+                </div>
+                <div class="stat-icon bg-success-subtle text-success">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-label">Active Borrows</div>
+                    <div class="stat-value text-warning">{{ active_count }}</div>
+                </div>
+                <div class="stat-icon bg-warning-subtle text-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-label">Top Category</div>
+                    <div class="fs-6 fw-bold text-dark mt-2 text-truncate" style="max-width: 110px;" title="{{ popular_category }}">{{ popular_category }}</div>
+                </div>
+                <div class="stat-icon bg-purple-subtle text-purple" style="background: #ede9fe; color: #7c3aed;">
+                    <i class="bi bi-bookmark-star"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stat-label">DW Fact Rows</div>
+                    <div class="stat-value text-primary">{{ warehouse_fact_count }}</div>
+                </div>
+                <div class="stat-icon bg-danger-subtle text-danger">
+                    <i class="bi bi-database-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <!-- Monthly Trend Mini Chart -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 h-100 bg-white">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up text-primary me-2"></i>Borrowing Activity Trend</h6>
+                <a href="{{ url_for('circulation.index') }}" class="btn btn-sm btn-link text-decoration-none">Full Analytics &rarr;</a>
+            </div>
+            <div class="card-body">
+                <canvas id="miniTrendChart" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Distribution Mini Chart -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 h-100 bg-white">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart text-info me-2"></i>Popular Categories</h6>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="width: 100%; max-height: 220px;">
+                    <canvas id="miniCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Transactions Table & Mining Quick Launch -->
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 bg-white">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history text-secondary me-2"></i>Recent Borrowing Transactions</h6>
+                <a href="{{ url_for('borrowing.index') }}" class="btn btn-sm btn-link text-decoration-none">View All Transactions &rarr;</a>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>Tx ID</th>
+                            <th>Reader</th>
+                            <th>Book Title</th>
+                            <th>Category</th>
+                            <th>Borrow Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in recent_transactions %}
+                        <tr>
+                            <td class="fw-semibold text-primary">{{ tx.transaction_id }}</td>
+                            <td>{{ tx.reader_name }}</td>
+                            <td class="text-truncate" style="max-width: 180px;" title="{{ tx.book_title }}">{{ tx.book_title }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ tx.category }}</span></td>
+                            <td>{{ tx.borrow_date }}</td>
+                            <td>
+                                {% if tx.status == 'Returned' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Returned</span>
+                                {% elif tx.status == 'Overdue' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Borrowed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Mining Quick Nav -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-cpu text-primary me-2"></i>Data Mining Modules</h6>
+            </div>
+            <div class="card-body d-flex flex-column gap-3">
+                <a href="{{ url_for('mining.classification_view') }}" class="card text-decoration-none border p-3 hover-shadow transition">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary-subtle text-primary me-3">
+                            <i class="bi bi-node-plus"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Reader Classification</h6>
+                            <p class="text-secondary small mb-0">Decision Tree & Borrowing Behavior Model</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('mining.clustering_view') }}" class="card text-decoration-none border p-3 hover-shadow transition">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success-subtle text-success me-3">
+                            <i class="bi bi-intersect"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Reader Clustering</h6>
+                            <p class="text-secondary small mb-0">K-Means Segment Profiling (k=3)</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('mining.patterns_view') }}" class="card text-decoration-none border p-3 hover-shadow transition">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning-subtle text-warning me-3">
+                            <i class="bi bi-link-45deg"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Borrowing Patterns</h6>
+                            <p class="text-secondary small mb-0">Apriori Association Rules Mining</p>
+                        </div>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('text_mining.index') }}" class="card text-decoration-none border p-3 hover-shadow transition">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info-subtle text-info me-3">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Text Mining & NLP</h6>
+                            <p class="text-secondary small mb-0">TF-IDF & Semantic Book Search</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Initialize Dashboard Charts
+    const trendLabels = {{ monthly_trend | map(attribute='ym') | list | tojson }};
+    const trendData = {{ monthly_trend | map(attribute='cnt') | list | tojson }};
+
+    const ctxTrend = document.getElementById('miniTrendChart');
+    if (ctxTrend) {
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Borrowings',
+                    data: trendData,
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    const catLabels = {{ cat_dist | map(attribute='category') | list | tojson }};
+    const catData = {{ cat_dist | map(attribute='cnt') | list | tojson }};
+
+    const ctxCat = document.getElementById('miniCategoryChart');
+    if (ctxCat) {
+        new Chart(ctxCat, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catData,
+                    backgroundColor: ['#0284c7', '#0d9488', '#f59e0b', '#ec4899', '#8b5cf6', '#64748b']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

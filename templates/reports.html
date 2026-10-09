@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}System Reports &amp; Export - Library DW & DM{% endblock %}
+{% block page_title %}Module 6: Comprehensive Reports &amp; Data Export{% endblock %}
+
+{% block content %}
+<!-- Report Action Toolbar -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h5 class="fw-bold mb-1">Academic Project Comprehensive Reports</h5>
+            <p class="text-secondary small mb-0">Generate, view, and export formatted reports across Circulation, Reader Mining, Association Rules, and Text Mining.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm px-3 btn-no-print">
+                <i class="bi bi-printer me-1"></i> Print / Save as PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Report Navigation Tabs -->
+<div class="card border-0 shadow-sm rounded-3 bg-white mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <ul class="nav nav-pills card-header-pills" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link {% if active_tab == 'circulation' %}active{% endif %} fw-bold" data-bs-toggle="tab" data-bs-target="#tab-circ-rep">
+                    <i class="bi bi-pie-chart me-1"></i> 1. Circulation Report
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link {% if active_tab == 'readers' %}active{% endif %} fw-bold" data-bs-toggle="tab" data-bs-target="#tab-reader-rep">
+                    <i class="bi bi-people me-1"></i> 2. Reader Analysis Report
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link {% if active_tab == 'patterns' %}active{% endif %} fw-bold" data-bs-toggle="tab" data-bs-target="#tab-pattern-rep">
+                    <i class="bi bi-link-45deg me-1"></i> 3. Pattern Mining Report
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link {% if active_tab == 'text' %}active{% endif %} fw-bold" data-bs-toggle="tab" data-bs-target="#tab-text-rep">
+                    <i class="bi bi-file-earmark-text me-1"></i> 4. Text Mining Report
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-4">
+        <div class="tab-content">
+            <!-- 1. Circulation Report Tab -->
+            <div class="tab-pane fade {% if active_tab == 'circulation' %}show active{% endif %}" id="tab-circ-rep">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-primary">Library Book Circulation Executive Summary</h6>
+                    <a href="{{ url_for('reports.export_csv', report_type='circulation') }}" class="btn btn-sm btn-outline-success btn-no-print">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Circulation CSV
+                    </a>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light">
+                            <span class="small text-muted d-block">Total Borrows Recorded</span>
+                            <span class="fs-4 fw-bold text-dark">{{ circ_summary.total_borrowings }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light">
+                            <span class="small text-muted d-block">Returned vs Pending</span>
+                            <span class="fs-4 fw-bold text-success">{{ circ_summary.returned_count }} / {{ circ_summary.pending_count }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light">
+                            <span class="small text-muted d-block">Total Overdue Fines</span>
+                            <span class="fs-4 fw-bold text-danger">${{ "%.2f"|format(circ_summary.total_fines) }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light">
+                            <span class="small text-muted d-block">Avg Borrow Duration</span>
+                            <span class="fs-4 fw-bold text-info">{{ "%.1f"|format(circ_summary.avg_duration) }} days</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-dark mb-2">Top 10 Most Circulated Book Titles</h6>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-custom align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Book Title</th>
+                                <th>Category</th>
+                                <th>Author</th>
+                                <th>Total Borrow Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in popular_books %}
+                            <tr>
+                                <td class="fw-semibold text-dark">{{ b.title }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ b.category }}</span></td>
+                                <td>{{ b.author }}</td>
+                                <td class="fw-bold text-primary">{{ b.borrows }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 2. Reader Analysis Report Tab -->
+            <div class="tab-pane fade {% if active_tab == 'readers' %}show active{% endif %}" id="tab-reader-rep">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-primary">Reader Classification &amp; Clustering Segmentation Report</h6>
+                    <a href="{{ url_for('reports.export_csv', report_type='readers') }}" class="btn btn-sm btn-outline-success btn-no-print">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Readers Analysis CSV
+                    </a>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded bg-light">
+                            <h6 class="fw-bold mb-2">Decision Tree Classification Distribution:</h6>
+                            <ul class="list-unstyled small mb-0">
+                                <li>&bull; Low Borrowers (1-3 books): <strong>{{ classification_res.distribution.get('Low Borrower', 0) }} readers</strong></li>
+                                <li>&bull; Medium Borrowers (4-7 books): <strong>{{ classification_res.distribution.get('Medium Borrower', 0) }} readers</strong></li>
+                                <li>&bull; High Borrowers (8+ books): <strong>{{ classification_res.distribution.get('High Borrower', 0) }} readers</strong></li>
+                                <li class="mt-1 text-success fw-bold">&bull; Model Test Accuracy: {{ classification_res.accuracy }}%</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded bg-light">
+                            <h6 class="fw-bold mb-2">K-Means Reader Clusters (k=3):</h6>
+                            <ul class="list-unstyled small mb-0">
+                                {% for c in clustering_res.clusters %}
+                                <li>&bull; <strong>{{ c.cluster_name }}</strong>: {{ c.reader_count }} readers (Avg Borrows: {{ c.avg_borrowing_count }})</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-dark mb-2">Reader Behavioral Profiles</h6>
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-bordered table-custom align-middle">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Reader ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Membership</th>
+                                <th>Borrowings</th>
+                                <th>Avg Duration</th>
+                                <th>Total Fine</th>
+                                <th>Classification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in classification_res.readers %}
+                            <tr>
+                                <td class="fw-bold text-primary">{{ r.reader_id }}</td>
+                                <td>{{ r.reader_name }}</td>
+                                <td>{{ r.department }}</td>
+                                <td>{{ r.membership_type }}</td>
+                                <td class="fw-bold">{{ r.borrow_count }}</td>
+                                <td>{{ "%.1f"|format(r.avg_duration) }} days</td>
+                                <td>${{ "%.2f"|format(r.total_fine) }}</td>
+                                <td>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ r.predicted_category }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. Pattern Mining Report Tab -->
+            <div class="tab-pane fade {% if active_tab == 'patterns' %}show active{% endif %}" id="tab-pattern-rep">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-primary">Apriori Association Rules Mining Report</h6>
+                    <a href="{{ url_for('reports.export_csv', report_type='patterns') }}" class="btn btn-sm btn-outline-success btn-no-print">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Association Rules CSV
+                    </a>
+                </div>
+
+                <p class="small text-secondary mb-3">Frequent Itemsets Count: <strong>{{ pattern_res.frequent_itemsets|length }}</strong> &bull; Discovered Association Rules: <strong>{{ pattern_res.rules|length }}</strong> (Min Support = 8%, Min Confidence = 40%)</p>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-custom align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Antecedent (If Borrowed)</th>
+                                <th>Consequent (Also Borrowed)</th>
+                                <th>Support (%)</th>
+                                <th>Confidence (%)</th>
+                                <th>Lift Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for rule in pattern_res.rules[:15] %}
+                            <tr>
+                                <td class="fw-semibold">{{ rule.antecedent_str }}</td>
+                                <td class="text-success fw-semibold">&rarr; {{ rule.consequent_str }}</td>
+                                <td>{{ rule.support_pct }}%</td>
+                                <td class="fw-bold text-primary">{{ rule.confidence_pct }}%</td>
+                                <td><span class="badge bg-danger">{{ rule.lift }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-3 text-muted">No rules available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. Text Mining Report Tab -->
+            <div class="tab-pane fade {% if active_tab == 'text' %}show active{% endif %}" id="tab-text-rep">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0 text-primary">Text Mining &amp; Term Frequency-Inverse Document Frequency (TF-IDF) Report</h6>
+                    <a href="{{ url_for('reports.export_csv', report_type='text_mining') }}" class="btn btn-sm btn-outline-success btn-no-print">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export TF-IDF Terms CSV
+                    </a>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-2">Top 15 Most Frequent Terms in Library Catalogue</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-custom">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Term</th>
+                                        <th>Occurrence Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for w in freq_data.top_words[:15] %}
+                                    <tr>
+                                        <td class="fw-semibold">{{ w.word }}</td>
+                                        <td class="fw-bold text-primary">{{ w.count }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-2">Top 15 Highest TF-IDF Distinctive Keywords</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-custom">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Keyword</th>
+                                        <th>TF-IDF Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for t in tfidf_data.top_tfidf_terms[:15] %}
+                                    <tr>
+                                        <td class="fw-semibold">{{ t.term }}</td>
+                                        <td class="fw-bold text-danger">{{ t.tfidf_score }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

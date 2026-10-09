@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Borrowing Transactions - Library DW & DM{% endblock %}
+{% block page_title %}Module 1: Borrowing Transactions Management{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div>
+                <h5 class="fw-bold mb-1">Borrowing & Circulation Records</h5>
+                <p class="text-secondary small mb-0">Total Transactions: <strong>{{ transactions|length }}</strong></p>
+            </div>
+            <button class="btn btn-primary btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#issueBookModal">
+                <i class="bi bi-plus-circle me-1"></i> Issue New Book
+            </button>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <form method="GET" action="{{ url_for('borrowing.index') }}" class="row g-2 mb-4">
+            <div class="col-md-7">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Search by Tx ID, Reader Name, or Book Title..." value="{{ selected_search }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    <option value="Returned" {% if selected_status == 'Returned' %}selected{% endif %}>Returned</option>
+                    <option value="Borrowed" {% if selected_status == 'Borrowed' %}selected{% endif %}>Borrowed (Active)</option>
+                    <option value="Overdue" {% if selected_status == 'Overdue' %}selected{% endif %}>Overdue</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-dark w-100">Filter</button>
+                {% if selected_search or selected_status %}
+                <a href="{{ url_for('borrowing.index') }}" class="btn btn-sm btn-outline-secondary" title="Reset Filters"><i class="bi bi-x-lg"></i></a>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Transactions Table -->
+        <div class="table-responsive">
+            <table class="table table-hover table-custom align-middle">
+                <thead>
+                    <tr>
+                        <th>Tx ID</th>
+                        <th>Reader Details</th>
+                        <th>Book Details</th>
+                        <th>Borrow Date</th>
+                        <th>Due Date</th>
+                        <th>Return Date</th>
+                        <th>Fine ($)</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ t.transaction_id }}</td>
+                        <td>
+                            <div class="fw-semibold">{{ t.reader_name }}</div>
+                            <small class="text-muted">{{ t.reader_id }} &bull; {{ t.department }}</small>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark text-truncate" style="max-width: 220px;" title="{{ t.book_title }}">{{ t.book_title }}</div>
+                            <small class="badge bg-light text-dark border">{{ t.category }}</small>
+                        </td>
+                        <td>{{ t.borrow_date }}</td>
+                        <td>{{ t.due_date }}</td>
+                        <td>
+                            {% if t.return_date %}
+                            <span class="text-success">{{ t.return_date }}</span>
+                            {% else %}
+                            <span class="text-muted fst-italic">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.fine > 0 %}
+                            <span class="text-danger fw-bold">${{ "%.2f"|format(t.fine) }}</span>
+                            {% else %}
+                            <span class="text-muted">$0.00</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if t.status == 'Returned' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Returned</span>
+                            {% elif t.status == 'Overdue' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Overdue</span>
+                            {% else %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Borrowed</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            {% if t.status != 'Returned' %}
+                            <form method="POST" action="{{ url_for('borrowing.return_book', transaction_id=t.transaction_id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-success py-0 px-2" title="Mark as Returned">
+                                    <i class="bi bi-check-circle me-1"></i> Return
+                                </button>
+                            </form>
+                            {% endif %}
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" data-bs-toggle="modal" data-bs-target="#deleteTxModal{{ t.transaction_id }}" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Delete Modal -->
+                    <div class="modal fade" id="deleteTxModal{{ t.transaction_id }}" tabindex="-1">
+                        <div class="modal-dialog modal-sm">
+                            <div class="modal-content">
+                                <form method="POST" action="{{ url_for('borrowing.delete', transaction_id=t.transaction_id) }}">
+                                    <div class="modal-header">
+                                        <h6 class="modal-title fw-bold text-danger">Confirm Deletion</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body small">
+                                        Delete transaction record <strong>{{ t.transaction_id }}</strong>?
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-3 d-block mb-1"></i> No borrowing records found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Issue Book Modal -->
+<div class="modal fade" id="issueBookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('borrowing.add') }}">
+                <div class="modal-header">
+                    <h6 class="modal-title fw-bold"><i class="bi bi-bookmark-plus me-1 text-primary"></i> Issue Book to Reader</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Transaction ID</label>
+                        <input type="text" name="transaction_id" class="form-control" value="{{ next_tx_id }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select Reader</label>
+                        <select name="reader_id" class="form-select" required>
+                            <option value="">-- Choose Reader --</option>
+                            {% for r in readers %}
+                            <option value="{{ r.reader_id }}">{{ r.name }} ({{ r.reader_id }} - {{ r.department }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select Book</label>
+                        <select name="book_id" class="form-select" required>
+                            <option value="">-- Choose Book --</option>
+                            {% for b in books %}
+                            <option value="{{ b.book_id }}">{{ b.title }} ({{ b.book_id }} - {{ b.category }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Borrow Date</label>
+                            <input type="date" name="borrow_date" class="form-control" value="{{ default_borrow_date }}" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Due Date</label>
+                            <input type="date" name="due_date" class="form-control" value="{{ default_due_date }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Initial Status</label>
+                        <select name="status" class="form-select">
+                            <option value="Borrowed">Borrowed (Active)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Confirm Issue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

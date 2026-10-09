@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}ETL Pipeline - Library DW & DM{% endblock %}
+{% block page_title %}Module 2: Extract, Transform & Load (ETL) Pipeline{% endblock %}
+
+{% block content %}
+<!-- ETL Trigger Card -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h4 class="fw-bold text-dark mb-1"><i class="bi bi-gear-wide-connected text-primary me-2"></i>ETL Data Synchronization Engine</h4>
+                <p class="text-secondary mb-0">Extracts raw transactional and master records from OLTP tables, performs validation and metric calculation, and loads clean records into the dimensional Data Warehouse.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <button id="btn-run-etl" class="btn btn-primary btn-lg px-4 shadow">
+                    <i class="bi bi-play-circle me-1"></i> Run ETL Pipeline
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Source vs Warehouse Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">OLTP Source Records</div>
+            <div class="stat-value text-dark">{{ total_source }}</div>
+            <small class="text-muted">{{ op_readers }} Readers &bull; {{ op_books }} Books &bull; {{ op_tx }} Transactions</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Warehouse Fact Rows</div>
+            <div class="stat-value text-primary">{{ wh_fact_count }}</div>
+            <small class="text-muted">Table: <code>fact_borrowing</code></small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Last ETL Status</div>
+            <div class="stat-value">
+                {% if last_log and last_log.status == 'SUCCESS' %}
+                <span class="text-success fs-4"><i class="bi bi-check-circle-fill me-1"></i>SUCCESS</span>
+                {% elif last_log %}
+                <span class="text-warning fs-4">{{ last_log.status }}</span>
+                {% else %}
+                <span class="text-muted fs-4">Not Run Yet</span>
+                {% endif %}
+            </div>
+            <small class="text-muted">{% if last_log %}{{ last_log.run_timestamp }}{% else %}Ready to execute{% endif %}</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Last Execution Time</div>
+            <div class="stat-value text-info">{% if last_log %}{{ last_log.execution_duration_sec }}s{% else %}0.0s{% endif %}</div>
+            <small class="text-muted">Extract + Transform + Load</small>
+        </div>
+    </div>
+</div>
+
+<!-- 3-Stage ETL Architecture Explanation -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-2 text-primary me-2"></i>3-Stage ETL Pipeline Lifecycle</h6>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100">
+                    <div class="stat-icon bg-primary text-white mx-auto mb-2"><i class="bi bi-cloud-arrow-down"></i></div>
+                    <h6 class="fw-bold text-dark mb-1">1. EXTRACT</h6>
+                    <p class="small text-secondary mb-0">Reads raw rows from operational OLTP tables: <code>readers</code>, <code>books</code>, and <code>borrowing_transactions</code>.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100">
+                    <div class="stat-icon bg-warning text-white mx-auto mb-2"><i class="bi bi-sliders"></i></div>
+                    <h6 class="fw-bold text-dark mb-1">2. TRANSFORM</h6>
+                    <p class="small text-secondary mb-0">Handles NULL dates, cleans strings, standardizes categories, calculates <code>borrowing_duration</code>, computes overdue fines, and formats calendar keys.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 border rounded-3 bg-light h-100">
+                    <div class="stat-icon bg-success text-white mx-auto mb-2"><i class="bi bi-database-up"></i></div>
+                    <h6 class="fw-bold text-dark mb-1">3. LOAD</h6>
+                    <p class="small text-secondary mb-0">Maps surrogate keys and inserts/updates <code>dim_reader</code>, <code>dim_book</code>, <code>dim_date</code>, and <code>fact_borrowing</code>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Execution History Log Table -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-text text-secondary me-2"></i>ETL Execution History (etl_log)</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Log ID</th>
+                    <th>Execution Timestamp</th>
+                    <th>Source Count</th>
+                    <th>Cleaned Count</th>
+                    <th>Warehouse Facts</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="fw-bold text-primary">#{{ log.log_id }}</td>
+                    <td>{{ log.run_timestamp }}</td>
+                    <td>{{ log.source_records_count }}</td>
+                    <td>{{ log.cleaned_records_count }}</td>
+                    <td class="fw-semibold text-danger">{{ log.warehouse_fact_count }}</td>
+                    <td>{{ log.execution_duration_sec }}s</td>
+                    <td>
+                        {% if log.status == 'SUCCESS' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">SUCCESS</span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ log.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        No ETL runs recorded yet. Click "Run ETL Pipeline" above to perform the first synchronization.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

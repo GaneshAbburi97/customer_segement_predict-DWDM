@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Reader Classification - Library DW & DM{% endblock %}
+{% block page_title %}Module 4: Reader Classification (Decision Tree){% endblock %}
+
+{% block content %}
+<!-- Module Overview -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h5 class="fw-bold mb-1">Supervised Learning: Reader Classification Model</h5>
+                <p class="text-secondary small mb-0">Classifies library readers into <strong>Low Borrower</strong> (1-3), <strong>Medium Borrower</strong> (4-7), and <strong>High Borrower</strong> (8+) profiles using behavioral attributes &amp; Decision Tree Classifier.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <a href="{{ url_for('mining.classification_view') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Retrain Model
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Model Accuracy</div>
+            <div class="stat-value text-success">{{ results.accuracy }}%</div>
+            <small class="text-muted">Decision Tree (Gini Index)</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Low Borrowers (1-3)</div>
+            <div class="stat-value text-secondary">{{ results.distribution.get('Low Borrower', 0) }}</div>
+            <small class="text-muted">Occasional readers</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">Medium Borrowers (4-7)</div>
+            <div class="stat-value text-primary">{{ results.distribution.get('Medium Borrower', 0) }}</div>
+            <small class="text-muted">Regular library visitors</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card-stat p-3">
+            <div class="stat-label">High Borrowers (8+)</div>
+            <div class="stat-value text-danger">{{ results.distribution.get('High Borrower', 0) }}</div>
+            <small class="text-muted">Power research users</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Confusion Matrix Card -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-grid-3x3 text-primary me-2"></i>Model Confusion Matrix</h6>
+            </div>
+            <div class="card-body p-4 text-center">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle text-center mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Actual \ Predicted</th>
+                                {% for lbl in results.matrix_labels %}
+                                <th>{{ lbl }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results.confusion_matrix %}
+                            {% set outer_loop_index = loop.index0 %}
+                            <tr>
+                                <th class="table-light">{{ results.matrix_labels[outer_loop_index] }}</th>
+                                {% for val in row %}
+                                <td class="{% if loop.index0 == outer_loop_index %}bg-success-subtle fw-bold text-success{% endif %}">
+                                    {{ val }}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <small class="text-muted d-block mt-3">Diagonal cells represent correct class predictions.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Custom Reader Predictor Widget -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-magic text-info me-2"></i>Live Reader Classification Predictor</h6>
+            </div>
+            <div class="card-body p-4">
+                <form id="form-predict-reader">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Reader Age</label>
+                            <input type="number" name="age" class="form-control form-control-sm" value="23" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Total Borrow Count</label>
+                            <input type="number" name="borrow_count" class="form-control form-control-sm" value="6" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Avg Duration (Days)</label>
+                            <input type="number" name="avg_duration" class="form-control form-control-sm" value="14" step="0.5" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Total Fine ($)</label>
+                            <input type="number" name="total_fine" class="form-control form-control-sm" value="0.0" step="0.5" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Late Returns</label>
+                            <input type="number" name="late_returns" class="form-control form-control-sm" value="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100 py-2 fw-semibold">
+                        <i class="bi bi-cpu me-1"></i> Predict Category with Decision Tree
+                    </button>
+                </form>
+
+                <div id="prediction-result-box" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Classification Evaluation Report & Feature Importances -->
+<div class="row g-4 mb-4">
+    <!-- Classification Report Table -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-bar-graph text-secondary me-2"></i>Classification Metrics Report</h6>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table table-hover table-custom mb-0">
+                    <thead>
+                        <tr>
+                            <th>Class Category</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1-Score</th>
+                            <th>Support</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lbl in results.matrix_labels %}
+                        {% set metric = results.classification_report.get(lbl, {}) %}
+                        <tr>
+                            <td class="fw-bold text-dark">{{ lbl }}</td>
+                            <td>{{ "%.2f"|format(metric.get('precision', 0.0)) }}</td>
+                            <td>{{ "%.2f"|format(metric.get('recall', 0.0)) }}</td>
+                            <td>{{ "%.2f"|format(metric.get('f1-score', 0.0)) }}</td>
+                            <td>{{ metric.get('support', 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Importances -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-steps text-warning me-2"></i>Decision Tree Feature Importances</h6>
+            </div>
+            <div class="card-body p-4">
+                {% for feat, imp in results.feature_importances.items() %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-bold mb-1">
+                        <span>{{ feat }}</span>
+                        <span>{{ "%.1f"|format(imp * 100) }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ imp * 100 }}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reader Classification Detail Table -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-people text-primary me-2"></i>Classified Readers Directory</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Reader ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Membership</th>
+                    <th>Borrow Count</th>
+                    <th>Avg Duration</th>
+                    <th>Fines</th>
+                    <th>Classified Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results.readers %}
+                <tr>
+                    <td class="fw-bold text-primary">{{ r.reader_id }}</td>
+                    <td>{{ r.reader_name }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ r.department }}</span></td>
+                    <td>{{ r.membership_type }}</td>
+                    <td class="fw-bold">{{ r.borrow_count }}</td>
+                    <td>{{ "%.1f"|format(r.avg_duration) }} days</td>
+                    <td>${{ "%.2f"|format(r.total_fine) }}</td>
+                    <td>
+                        {% if r.predicted_category == 'High Borrower' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">High Borrower</span>
+                        {% elif r.predicted_category == 'Medium Borrower' %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Medium Borrower</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Low Borrower</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

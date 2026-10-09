@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Library DW & DM System{% endblock %}
+
+{% block login_content %}
+<div class="row justify-content-center align-items-center min-vh-100">
+    <div class="col-md-5 col-lg-4">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <i class="bi bi-book-half display-5"></i>
+                <h4 class="mt-2 fw-bold mb-1">Library DW & DM</h4>
+                <p class="small text-white-50 mb-0">Data Warehouse & Mining Portal</p>
+            </div>
+            <div class="card-body p-4">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show small" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <form method="POST" action="{{ url_for('auth.login') }}">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                            <input type="text" name="username" class="form-control" placeholder="Enter username" value="admin" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-secondary small fw-bold">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                            <input type="password" name="password" class="form-control" placeholder="Enter password" value="admin123" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Dashboard
+                    </button>
+                </form>
+
+                <div class="mt-4 p-3 bg-light rounded text-center small text-muted border">
+                    <span class="d-block fw-bold text-dark mb-1">Demo Credentials:</span>
+                    <span>Username: <code>admin</code> &bull; Password: <code>admin123</code></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

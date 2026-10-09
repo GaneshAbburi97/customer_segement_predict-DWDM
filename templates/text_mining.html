@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Text Mining Analysis - Library DW & DM{% endblock %}
+{% block page_title %}Module 5: Text Mining &amp; TF-IDF Analysis{% endblock %}
+
+{% block content %}
+<!-- Module Banner & Semantic Search Tool -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-1"><i class="bi bi-file-earmark-text text-primary me-2"></i>Text Mining &amp; Keyword Extraction Engine</h5>
+        <p class="text-secondary small mb-3">Extracts semantic term distributions, word frequencies, and TF-IDF (Term Frequency - Inverse Document Frequency) matrices from book titles, categories, and descriptions.</p>
+
+        <!-- Search Bar -->
+        <form method="GET" action="{{ url_for('text_mining.index') }}" class="row g-2">
+            <div class="col-md-9">
+                <div class="input-group">
+                    <span class="input-group-text bg-light"><i class="bi bi-search text-primary"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Enter keywords to search books via TF-IDF Cosine Similarity (e.g., 'python machine learning', 'relational database sql', 'cyber security network')..." value="{{ query }}">
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search me-1"></i> Semantic Search</button>
+                {% if query %}
+                <a href="{{ url_for('text_mining.index') }}" class="btn btn-outline-secondary" title="Clear Query"><i class="bi bi-x-lg"></i></a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Search Results (if user searched) -->
+{% if query %}
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white border-start border-4 border-primary">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-stars text-warning me-2"></i>TF-IDF Semantic Search Results for "{{ query }}"</h6>
+        <span class="badge bg-primary">{{ search_results|length }} Matches Found</span>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Book ID</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Author</th>
+                    <th>Description Abstract</th>
+                    <th>Relevance Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in search_results %}
+                <tr>
+                    <td class="fw-bold text-primary">{{ b.book_id }}</td>
+                    <td class="fw-semibold text-dark">{{ b.title }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ b.category }}</span></td>
+                    <td>{{ b.author }}</td>
+                    <td><small class="text-secondary text-truncate d-inline-block" style="max-width: 320px;" title="{{ b.description }}">{{ b.description }}</small></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">{{ b.similarity_score }}%</span>
+                            <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                                <div class="progress-bar bg-success" style="width: {{ b.similarity_score }}%;"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">No books matched the query terms.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Word Cloud Badges Card -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-cloud text-info me-2"></i>Corpus Keyword Cloud (Preprocessed Tokens)</h6>
+    </div>
+    <div class="card-body p-4 text-center">
+        <div class="d-flex flex-wrap justify-content-center align-items-center p-2">
+            {% for item in freq_data.word_cloud_data %}
+            <span class="word-badge" style="font-size: {{ item.size }}px;">
+                {{ item.text }}
+            </span>
+            {% endfor %}
+        </div>
+        <small class="text-muted d-block mt-3">Tokens generated after lowercase conversion, punctuation removal, and stop-word filtering.</small>
+    </div>
+</div>
+
+<!-- Frequency Chart & Top TF-IDF Terms -->
+<div class="row g-4 mb-4">
+    <!-- Word Frequency Bar Chart -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Top 20 Most Frequent Words</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartWordFreq" height="230"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top TF-IDF Terms List -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-sort-numeric-down text-danger me-2"></i>Top TF-IDF Term Weights</h6>
+            </div>
+            <div class="card-body p-0 table-responsive" style="max-height: 420px; overflow-y: auto;">
+                <table class="table table-hover table-custom mb-0">
+                    <thead class="sticky-top bg-light">
+                        <tr>
+                            <th>Keyword Term</th>
+                            <th>Mean TF-IDF Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for term in tfidf_data.top_tfidf_terms %}
+                        <tr>
+                            <td class="fw-semibold text-dark">{{ term.term }}</td>
+                            <td>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold text-danger">{{ term.tfidf_score }}</span>
+                                    <div class="progress" style="width: 100px; height: 6px;">
+                                        <div class="progress-bar bg-danger" style="width: {{ (term.tfidf_score * 300)|round }}%;"></div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Book Profiles Top Keywords -->
+<div class="card border-0 shadow-sm rounded-3 bg-white">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-tags text-primary me-2"></i>Extracted TF-IDF Top Keywords per Book</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover table-custom align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Book ID</th>
+                    <th>Book Title</th>
+                    <th>Category</th>
+                    <th>Top Extracted Keywords (TF-IDF Ranked)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in tfidf_data.book_tfidf_profiles %}
+                <tr>
+                    <td class="fw-bold text-primary">{{ doc.book_id }}</td>
+                    <td class="fw-semibold text-dark">{{ doc.title }}</td>
+                    <td><span class="badge bg-light text-dark border">{{ doc.category }}</span></td>
+                    <td>
+                        {% for kw in doc.top_keywords %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle me-1">
+                            {{ kw.term }} <small class="text-secondary">({{ kw.score }})</small>
+                        </span>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const wordLabels = {{ freq_data.top_words | map(attribute='word') | list | tojson }};
+    const wordCounts = {{ freq_data.top_words | map(attribute='count') | list | tojson }};
+
+    const ctxWord = document.getElementById('chartWordFreq');
+    if (ctxWord) {
+        new Chart(ctxWord, {
+            type: 'bar',
+            data: {
+                labels: wordLabels,
+                datasets: [{
+                    label: 'Word Frequency Count',
+                    data: wordCounts,
+                    backgroundColor: '#0284c7'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { autoSkip: false, maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

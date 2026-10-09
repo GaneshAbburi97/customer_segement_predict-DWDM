@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Circulation Analysis - Library DW & DM{% endblock %}
+{% block page_title %}Module 3: Book Circulation Analysis Dashboard{% endblock %}
+
+{% block content %}
+<!-- Filter Toolbar -->
+<div class="card border-0 shadow-sm rounded-3 mb-4 bg-white">
+    <div class="card-body p-3">
+        <form id="circulation-filter-form" class="row g-2 align-items-center">
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-secondary mb-1">Filter by Year</label>
+                <select id="filter-year" name="year" class="form-select form-select-sm">
+                    <option value="All">All Years</option>
+                    {% for y in years %}
+                    <option value="{{ y }}">{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary mb-1">Filter by Department</label>
+                <select id="filter-dept" name="department" class="form-select form-select-sm">
+                    <option value="All">All Departments</option>
+                    {% for d in departments %}
+                    <option value="{{ d }}">{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary mb-1">Filter by Category</label>
+                <select id="filter-cat" name="category" class="form-select form-select-sm">
+                    <option value="All">All Categories</option>
+                    {% for c in categories %}
+                    <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary mb-1">Filter by Membership</label>
+                <select id="filter-mem" name="membership" class="form-select form-select-sm">
+                    <option value="All">All Memberships</option>
+                    {% for m in memberships %}
+                    <option value="{{ m }}">{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1 text-end pt-3">
+                <button type="button" id="btn-reset-filters" class="btn btn-sm btn-outline-secondary w-100" title="Reset Filters">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Dynamic KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="stat-label">Total Readers</div>
+            <div id="kpi-readers" class="stat-value text-primary">{{ initial_data.kpis.total_readers }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="stat-label">Total Books</div>
+            <div id="kpi-books" class="stat-value text-info">{{ initial_data.kpis.total_books }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="stat-label">Total Borrowings</div>
+            <div id="kpi-borrowings" class="stat-value text-dark">{{ initial_data.kpis.total_borrowings }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="stat-label">Returned Books</div>
+            <div id="kpi-returned" class="stat-value text-success">{{ initial_data.kpis.returned_count }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="stat-label">Pending Returns</div>
+            <div id="kpi-pending" class="stat-value text-warning">{{ initial_data.kpis.pending_count }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-stat p-3">
+            <div class="stat-label">Total Fine ($)</div>
+            <div id="kpi-fines" class="stat-value text-danger">${{ "%.2f"|format(initial_data.kpis.total_fines) }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- 7 Circulation Charts Grid -->
+<div class="row g-4 mb-4">
+    <!-- Chart 1: Monthly Borrowing Trends -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up-arrow text-primary me-2"></i>1. Monthly Borrowing Trends</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartMonthly" height="130"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Most Borrowed Books -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line text-info me-2"></i>2. Most Borrowed Books</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartTopBooks" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 3: Most Popular Book Categories -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill text-warning me-2"></i>3. Popular Categories</h6>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="width: 100%; max-height: 240px;">
+                    <canvas id="chartCategories"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 4: Borrowing by Department -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-building text-success me-2"></i>4. Borrowings by Department</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartDepartments" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 5: Borrowing by Membership Type -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-person-workspace text-purple me-2"></i>5. Borrowings by Membership</h6>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="width: 100%; max-height: 240px;">
+                    <canvas id="chartMemberships"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 6: Returned vs Pending Books -->
+    <div class="col-md-6 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-check2-circle text-teal me-2"></i>6. Returned vs Pending Books</h6>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="width: 100%; max-height: 220px;">
+                    <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 7: Average Borrowing Duration by Category -->
+    <div class="col-md-12 col-lg-6">
+        <div class="card border-0 shadow-sm rounded-3 bg-white h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-hourglass-top text-danger me-2"></i>7. Avg Borrowing Duration (Days) by Category</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chartDuration" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let initialPayload = {{ initial_data | tojson }};
+    let chartMonthlyInstance, chartTopBooksInstance, chartCategoriesInstance, chartDepartmentsInstance, chartMembershipsInstance, chartStatusInstance, chartDurationInstance;
+
+    function renderAllCharts(payload) {
+        // Destroy existing instances if refreshing
+        if (chartMonthlyInstance) chartMonthlyInstance.destroy();
+        if (chartTopBooksInstance) chartTopBooksInstance.destroy();
+        if (chartCategoriesInstance) chartCategoriesInstance.destroy();
+        if (chartDepartmentsInstance) chartDepartmentsInstance.destroy();
+        if (chartMembershipsInstance) chartMembershipsInstance.destroy();
+        if (chartStatusInstance) chartStatusInstance.destroy();
+        if (chartDurationInstance) chartDurationInstance.destroy();
+
+        // 1. Monthly Chart
+        chartMonthlyInstance = new Chart(document.getElementById('chartMonthly'), {
+            type: 'line',
+            data: {
+                labels: payload.monthly_trend.labels,
+                datasets: [{
+                    label: 'Borrowings',
+                    data: payload.monthly_trend.data,
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 5
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // 2. Top Books Chart
+        chartTopBooksInstance = new Chart(document.getElementById('chartTopBooks'), {
+            type: 'bar',
+            data: {
+                labels: payload.top_books.labels,
+                datasets: [{
+                    label: 'Borrows',
+                    data: payload.top_books.data,
+                    backgroundColor: '#0d9488'
+                }]
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } } }
+        });
+
+        // 3. Categories Chart
+        chartCategoriesInstance = new Chart(document.getElementById('chartCategories'), {
+            type: 'doughnut',
+            data: {
+                labels: payload.categories.labels,
+                datasets: [{
+                    data: payload.categories.data,
+                    backgroundColor: ['#0284c7', '#0d9488', '#f59e0b', '#ec4899', '#8b5cf6', '#64748b', '#10b981']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+        });
+
+        // 4. Departments Chart
+        chartDepartmentsInstance = new Chart(document.getElementById('chartDepartments'), {
+            type: 'bar',
+            data: {
+                labels: payload.departments.labels,
+                datasets: [{
+                    label: 'Borrowings',
+                    data: payload.departments.data,
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // 5. Memberships Chart
+        chartMembershipsInstance = new Chart(document.getElementById('chartMemberships'), {
+            type: 'polarArea',
+            data: {
+                labels: payload.memberships.labels,
+                datasets: [{
+                    data: payload.memberships.data,
+                    backgroundColor: ['rgba(2, 132, 199, 0.7)', 'rgba(13, 148, 136, 0.7)', 'rgba(245, 158, 11, 0.7)', 'rgba(139, 92, 246, 0.7)']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+        });
+
+        // 6. Status Chart
+        chartStatusInstance = new Chart(document.getElementById('chartStatus'), {
+            type: 'pie',
+            data: {
+                labels: payload.status_distribution.labels,
+                datasets: [{
+                    data: payload.status_distribution.data,
+                    backgroundColor: ['#10b981', '#f59e0b']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // 7. Duration Chart
+        chartDurationInstance = new Chart(document.getElementById('chartDuration'), {
+            type: 'bar',
+            data: {
+                labels: payload.duration_by_category.labels,
+                datasets: [{
+                    label: 'Avg Duration (Days)',
+                    data: payload.duration_by_category.data,
+                    backgroundColor: '#f43f5e'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // Update KPIs
+        document.getElementById('kpi-readers').textContent = payload.kpis.total_readers;
+        document.getElementById('kpi-books').textContent = payload.kpis.total_books;
+        document.getElementById('kpi-borrowings').textContent = payload.kpis.total_borrowings;
+        document.getElementById('kpi-returned').textContent = payload.kpis.returned_count;
+        document.getElementById('kpi-pending').textContent = payload.kpis.pending_count;
+        document.getElementById('kpi-fines').textContent = '$' + Number(payload.kpis.total_fines).toFixed(2);
+    }
+
+    // Initial Render
+    renderAllCharts(initialPayload);
+
+    // Live Filter Handlers
+    function fetchFilteredCirculation() {
+        const year = document.getElementById('filter-year').value;
+        const dept = document.getElementById('filter-dept').value;
+        const cat = document.getElementById('filter-cat').value;
+        const mem = document.getElementById('filter-mem').value;
+
+        const queryParams = new URLSearchParams({ year: year, department: dept, category: cat, membership: mem });
+
+        fetch('/api/circulation-data?' + queryParams.toString())
+            .then(res => res.json())
+            .then(data => { renderAllCharts(data); })
+            .catch(err => console.error('Filter update error:', err));
+    }
+
+    document.querySelectorAll('#circulation-filter-form select').forEach(select => {
+        select.addEventListener('change', fetchFilteredCirculation);
+    });
+
+    document.getElementById('btn-reset-filters').addEventListener('click', () => {
+        document.getElementById('filter-year').value = 'All';
+        document.getElementById('filter-dept').value = 'All';
+        document.getElementById('filter-cat').value = 'All';
+        document.getElementById('filter-mem').value = 'All';
+        fetchFilteredCirculation();
+    });
+</script>
+{% endblock %}
